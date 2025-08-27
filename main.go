@@ -9,7 +9,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir("public")))
-	mux.Handle("/assets/logo.png", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 
 	server := &http.Server{
 		Addr:    ":8080",
