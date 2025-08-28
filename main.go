@@ -3,19 +3,21 @@ package main
 import (
 	"log"
 	"net/http"
+	"sync/atomic"
 )
 
 func main() {
 	mux := http.NewServeMux()
 
-	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir("app"))))
+	apiCfg := apiConfig{
+		fileserverHits: atomic.Int32{},
+	}
 
-	// Readyness Endpoint
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+	mux.HandleFunc("/healthz", apiCfg.healthz)
+	mux.HandleFunc("/metrics", apiCfg.metricsView)
+	mux.HandleFunc("/reset", apiCfg.metricsReset)
+
+	mux.Handle("/app/", http.StripPrefix("/app/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("app")))))
 
 	server := &http.Server{
 		Addr:    ":8080",
