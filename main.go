@@ -13,9 +13,9 @@ func main() {
 		fileserverHits: atomic.Int32{},
 	}
 
-	mux.HandleFunc("GET /healthz", apiCfg.healthz)
-	mux.HandleFunc("GET /metrics", apiCfg.metricsView)
-	mux.HandleFunc("POST /reset", apiCfg.metricsReset)
+	mux.HandleFunc("GET /api/healthz", apiCfg.healthz)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.metricsView)
+	mux.HandleFunc("POST /admin/reset", apiCfg.metricsReset)
 
 	mux.Handle("/app/", http.StripPrefix("/app/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("app")))))
 
