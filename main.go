@@ -21,16 +21,15 @@ func main() {
 		log.Fatal("DB_URL is not set")
 	}
 
-	db, err := sql.Open("postgres", dbURL)
+	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error opening database connection: %v", err)
 	}
-
-	dbQueries := database.New(db)
+	dbQueries := database.New(dbConn)
 
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
-		dbQueries:      dbQueries,
+		db:             dbQueries,
 	}
 
 	mux := http.NewServeMux()
