@@ -5,6 +5,7 @@
 *.so
 *.dylib
 out
+chirpy
 
 # Go build artifacts
 *.test

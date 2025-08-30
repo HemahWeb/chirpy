@@ -11,6 +11,8 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/HemahWeb/chirpy/internal/database"
+	"github.com/HemahWeb/chirpy/internal/handlers"
+	"github.com/HemahWeb/chirpy/internal/types"
 )
 
 func main() {
@@ -27,25 +29,27 @@ func main() {
 	}
 	dbQueries := database.New(dbConn)
 
-	apiCfg := apiConfig{
-		fileserverHits: atomic.Int32{},
-		db:             dbQueries,
-		platform:       os.Getenv("PLATFORM"),
+	apiCfg := types.ApiConfig{
+		FileserverHits: atomic.Int32{},
+		DB:             dbQueries,
+		Platform:       os.Getenv("PLATFORM"),
 	}
+
+	handler := handlers.New(&apiCfg)
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /api/healthz", healthz)
-	mux.HandleFunc("POST /api/validate_chirp", chirpValidate)
+	mux.HandleFunc("GET /api/healthz", handler.Healthz)
+	mux.HandleFunc("POST /api/validate_chirp", handler.ChirpValidate)
 
 	// Users
-	mux.HandleFunc("POST /api/users", apiCfg.usersCreate)
+	mux.HandleFunc("POST /api/users", handler.UsersCreate)
 
 	// Admin
-	mux.HandleFunc("POST /admin/reset", apiCfg.usersReset) // resets users and metrics
-	mux.HandleFunc("GET /admin/metrics", apiCfg.metricsView)
+	mux.HandleFunc("POST /admin/reset", handler.UsersReset) // resets users and metrics
+	mux.HandleFunc("GET /admin/metrics", handler.MetricsView)
 
-	mux.Handle("/app/", http.StripPrefix("/app/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("app")))))
+	mux.Handle("/app/", http.StripPrefix("/app/", handler.MiddlewareMetricsInc(http.FileServer(http.Dir("app")))))
 
 	server := &http.Server{
 		Addr:    ":8080",
