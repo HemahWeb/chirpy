@@ -6,9 +6,13 @@ import (
 	"net/http"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/HemahWeb/chirpy/internal/database"
+	"github.com/google/uuid"
 )
+
+// Handler: Metrics
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
@@ -42,11 +46,15 @@ func (cfg *apiConfig) metricsReset(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hits reset")
 }
 
+// Handler: Healthcheck
+
 func healthz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "OK")
 }
+
+// Handler: Validation
 
 func chirpValidate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
@@ -92,4 +100,42 @@ func getCleanedBody(body string, badWords map[string]struct{}) string {
 	}
 	cleaned := strings.Join(words, " ")
 	return cleaned
+}
+
+// Handler: Users
+
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
+
+func (cfg *apiConfig) usersCreate(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email string `json:"email"`
+	}
+	var params parameters
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// SQLC returns a database.User without API JSON tags
+	dbUser, err := cfg.db.CreateUser(r.Context(), params.Email)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create user", err)
+		return
+	}
+
+	// Map DB -> API (stable keys, decoupled from schema)
+	apiUser := User{
+		ID:        dbUser.ID,
+		CreatedAt: dbUser.CreatedAt,
+		UpdatedAt: dbUser.UpdatedAt,
+		Email:     dbUser.Email,
+	}
+
+	respondWithJSON(w, http.StatusCreated, apiUser)
 }
