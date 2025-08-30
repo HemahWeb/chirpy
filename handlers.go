@@ -40,12 +40,12 @@ func (cfg *apiConfig) metricsView(w http.ResponseWriter, r *http.Request) {
 		cfg.fileserverHits.Load())
 }
 
-func (cfg *apiConfig) metricsReset(w http.ResponseWriter, r *http.Request) {
+/* func (cfg *apiConfig) metricsReset(w http.ResponseWriter) {
 	cfg.fileserverHits.Store(0)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Hits reset")
-}
+} */
 
 // Handler: Healthcheck
 
@@ -119,24 +119,43 @@ func (cfg *apiConfig) usersCreate(w http.ResponseWriter, r *http.Request) {
 	var params parameters
 	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		respondWithError(w, http.StatusBadRequest, "Couldn't decode parameters", err)
 		return
 	}
 
 	// SQLC returns a database.User without API JSON tags
-	dbUser, err := cfg.db.CreateUser(r.Context(), params.Email)
+	user, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create user", err)
 		return
 	}
 
 	// Map DB -> API (stable keys, decoupled from schema)
-	apiUser := User{
-		ID:        dbUser.ID,
-		CreatedAt: dbUser.CreatedAt,
-		UpdatedAt: dbUser.UpdatedAt,
-		Email:     dbUser.Email,
+	respondWithJSON(w, http.StatusCreated, User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	})
+}
+
+func (cfg *apiConfig) usersReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform == "" {
+		respondWithError(w, http.StatusServiceUnavailable, "Platform not set in config", nil)
+		return
+	}
+	if cfg.platform != "dev" {
+		respondWithError(w, http.StatusForbidden, "Forbidden in non-dev platform", nil)
+		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, apiUser)
+	err := cfg.db.ResetUsers(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't reset users", err)
+		return
+	}
+
+	cfg.fileserverHits.Store(0)
+
+	respondWithJSON(w, http.StatusOK, struct{}{})
 }

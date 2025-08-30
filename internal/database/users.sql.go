@@ -68,6 +68,15 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
+const resetUsers = `-- name: ResetUsers :exec
+DELETE FROM users
+`
+
+func (q *Queries) ResetUsers(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, resetUsers)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users SET email = $2 WHERE id = $1 RETURNING id, created_at, updated_at, email
 `

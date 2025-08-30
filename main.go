@@ -42,8 +42,8 @@ func main() {
 	mux.HandleFunc("POST /api/users", apiCfg.usersCreate)
 
 	// Admin
+	mux.HandleFunc("POST /admin/reset", apiCfg.usersReset) // resets users and metrics
 	mux.HandleFunc("GET /admin/metrics", apiCfg.metricsView)
-	mux.HandleFunc("POST /admin/reset", apiCfg.metricsReset)
 
 	mux.Handle("/app/", http.StripPrefix("/app/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("app")))))
 
