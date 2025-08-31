@@ -40,7 +40,9 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/healthz", handler.Healthz)
-	mux.HandleFunc("POST /api/validate_chirp", handler.ChirpValidate)
+
+	// Chirps
+	mux.HandleFunc("POST /api/chirps", handler.ChirpsCreate)
 
 	// Users
 	mux.HandleFunc("POST /api/users", handler.UsersCreate)
