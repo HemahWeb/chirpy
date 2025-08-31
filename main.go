@@ -43,6 +43,7 @@ func main() {
 
 	// Chirps
 	mux.HandleFunc("POST /api/chirps", handler.ChirpsCreate)
+	mux.HandleFunc("GET /api/chirps", handler.ChirpsGetAll)
 
 	// Users
 	mux.HandleFunc("POST /api/users", handler.UsersCreate)

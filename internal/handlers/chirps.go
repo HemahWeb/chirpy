@@ -55,3 +55,25 @@ func (h *Handler) ChirpsCreate(w http.ResponseWriter, r *http.Request) {
 		UserID:    chirp.UserID,
 	})
 }
+
+func (h *Handler) ChirpsGetAll(w http.ResponseWriter, r *http.Request) {
+	chirps, err := h.config.DB.GetChirps(r.Context())
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't get chirps", err)
+		return
+	}
+
+	// map DB -> API (stable keys, decoupled from schema)
+	chirpsAPI := []types.Chirp{}
+	for _, chirp := range chirps {
+		chirpsAPI = append(chirpsAPI, types.Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		})
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, chirpsAPI)
+}
