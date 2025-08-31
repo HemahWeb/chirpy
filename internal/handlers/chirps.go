@@ -47,6 +47,7 @@ func (h *Handler) ChirpsCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// map DB -> API (stable keys, decoupled from schema)
 	utils.RespondWithJSON(w, http.StatusCreated, types.Chirp{
 		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
@@ -76,4 +77,28 @@ func (h *Handler) ChirpsGetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, chirpsAPI)
+}
+
+func (h *Handler) ChirpsGetByID(w http.ResponseWriter, r *http.Request) {
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid chirp ID: "+err.Error(), err)
+		return
+	}
+
+	chirp, err := h.config.DB.GetChirpByID(r.Context(), id)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "Chirp with ID "+id.String()+" does not exist", err)
+		return
+	}
+
+	// map DB -> API (stable keys, decoupled from schema)
+	utils.RespondWithJSON(w, http.StatusOK, types.Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	})
 }
