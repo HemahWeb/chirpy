@@ -33,6 +33,7 @@ func main() {
 		FileserverHits: atomic.Int32{},
 		DB:             dbQueries,
 		Platform:       os.Getenv("PLATFORM"),
+		JWTSecret:      os.Getenv("JWT_SECRET"),
 	}
 
 	handler := handlers.New(&apiCfg)
@@ -42,9 +43,9 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handler.Healthz)
 
 	// Chirps
-	mux.HandleFunc("POST /api/chirps", handler.ChirpsCreate)
-	mux.HandleFunc("GET /api/chirps", handler.ChirpsGetAll)
-	mux.HandleFunc("GET /api/chirps/{id}", handler.ChirpsGetByID)
+	mux.HandleFunc("POST /api/chirps", handler.PostChirps)
+	mux.HandleFunc("GET /api/chirps", handler.GetChirps)
+	mux.HandleFunc("GET /api/chirps/{id}", handler.GetChirpsByID)
 
 	// Users
 	mux.HandleFunc("POST /api/users", handler.UsersCreate)

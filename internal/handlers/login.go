@@ -3,22 +3,39 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/HemahWeb/chirpy/internal/auth"
-	"github.com/HemahWeb/chirpy/internal/types"
 	"github.com/HemahWeb/chirpy/internal/utils"
 )
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds int    `json:"expires_in_seconds,omitempty"`
 	}
+
+	type responseVals struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Email     string    `json:"email"`
+		Token     string    `json:"token"`
+	}
+
 	var params parameters
 	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Couldn't decode parameters", err)
 		return
+	}
+
+	// If expires_in_seconds is not provided, set it to 3600 (1 hour)
+	if params.ExpiresInSeconds == 0 {
+		params.ExpiresInSeconds = 3600
 	}
 
 	user, err := h.config.DB.GetUserByEmailForAuth(r.Context(), params.Email)
@@ -33,11 +50,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with user, without hashed password
-	utils.RespondWithJSON(w, http.StatusOK, types.User{
+	token, err := auth.MakeJWT(user.ID, h.config.JWTSecret, time.Duration(params.ExpiresInSeconds)*time.Second)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't create token", err)
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, responseVals{
 		ID:        user.ID,
-		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+		Token:     token,
 	})
 }
