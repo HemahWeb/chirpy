@@ -48,6 +48,7 @@ func main() {
 
 	// Users
 	mux.HandleFunc("POST /api/users", handler.UsersCreate)
+	mux.HandleFunc("POST /api/login", handler.Login)
 
 	// Admin
 	mux.HandleFunc("POST /admin/reset", handler.UsersReset) // resets users and metrics

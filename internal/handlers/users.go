@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/HemahWeb/chirpy/internal/auth"
+	"github.com/HemahWeb/chirpy/internal/database"
 	"github.com/HemahWeb/chirpy/internal/types"
 	"github.com/HemahWeb/chirpy/internal/utils"
 )
 
 func (h *Handler) UsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	var params parameters
 	err := json.NewDecoder(r.Body).Decode(&params)
@@ -19,8 +22,17 @@ func (h *Handler) UsersCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't hash password", err)
+		return
+	}
+
 	// SQLC returns a database.User without API JSON tags
-	user, err := h.config.DB.CreateUser(r.Context(), params.Email)
+	user, err := h.config.DB.CreateUser(r.Context(), database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+	})
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't create user", err)
 		return
