@@ -11,9 +11,8 @@ import (
 func TestMakeJWT(t *testing.T) {
 	userID := uuid.New()
 	secret := "test-secret"
-	expiresIn := 1 * time.Hour
 
-	token, err := MakeJWT(userID, secret, expiresIn)
+	token, err := MakeJWT(userID, secret)
 	if err != nil {
 		t.Fatalf("MakeJWT() failed: %v", err)
 	}
@@ -36,10 +35,9 @@ func TestMakeJWT(t *testing.T) {
 func TestMakeJWTWithEmptySecret(t *testing.T) {
 	userID := uuid.New()
 	secret := ""
-	expiresIn := 1 * time.Hour
 
 	// Note: JWT library actually allows empty secrets, so this test should pass
-	token, err := MakeJWT(userID, secret, expiresIn)
+	token, err := MakeJWT(userID, secret)
 	if err != nil {
 		t.Fatalf("MakeJWT() failed with empty secret: %v", err)
 	}
@@ -58,9 +56,8 @@ func TestMakeJWTWithEmptySecret(t *testing.T) {
 func TestValidateJWT(t *testing.T) {
 	userID := uuid.New()
 	secret := "test-secret"
-	expiresIn := 1 * time.Hour
 
-	token, err := MakeJWT(userID, secret, expiresIn)
+	token, err := MakeJWT(userID, secret)
 	if err != nil {
 		t.Fatalf("Failed to create test token: %v", err)
 	}
@@ -79,9 +76,8 @@ func TestValidateJWTWithWrongSecret(t *testing.T) {
 	userID := uuid.New()
 	correctSecret := "correct-secret"
 	wrongSecret := "wrong-secret"
-	expiresIn := 1 * time.Hour
 
-	token, err := MakeJWT(userID, correctSecret, expiresIn)
+	token, err := MakeJWT(userID, correctSecret)
 	if err != nil {
 		t.Fatalf("Failed to create test token: %v", err)
 	}
@@ -90,47 +86,6 @@ func TestValidateJWTWithWrongSecret(t *testing.T) {
 	_, err = ValidateJWT(token, wrongSecret)
 	if err == nil {
 		t.Error("ValidateJWT() should fail with wrong secret")
-	}
-}
-
-func TestValidateJWTWithExpiredToken(t *testing.T) {
-	userID := uuid.New()
-	secret := "test-secret"
-	expiresIn := -1 * time.Hour // Token expired 1 hour ago
-
-	token, err := MakeJWT(userID, secret, expiresIn)
-	if err != nil {
-		t.Fatalf("Failed to create expired test token: %v", err)
-	}
-
-	// Test expired token
-	_, err = ValidateJWT(token, secret)
-	if err == nil {
-		t.Error("ValidateJWT() should fail with expired token")
-	}
-}
-
-func TestValidateJWTWithExpiredTokenInPast(t *testing.T) {
-	userID := uuid.New()
-	secret := "test-secret"
-
-	// Create a token that expires in the past
-	claims := jwt.RegisteredClaims{
-		Issuer:    "chirpy",
-		Subject:   userID.String(),
-		IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)), // Expired 1 hour ago
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(secret))
-	if err != nil {
-		t.Fatalf("Failed to create expired test token: %v", err)
-	}
-
-	// Test expired token
-	_, err = ValidateJWT(tokenString, secret)
-	if err == nil {
-		t.Error("ValidateJWT() should fail with expired token")
 	}
 }
 
@@ -159,9 +114,8 @@ func TestValidateJWTWithInvalidToken(t *testing.T) {
 func TestValidateJWTWithTamperedToken(t *testing.T) {
 	userID := uuid.New()
 	secret := "test-secret"
-	expiresIn := 1 * time.Hour
 
-	token, err := MakeJWT(userID, secret, expiresIn)
+	token, err := MakeJWT(userID, secret)
 	if err != nil {
 		t.Fatalf("Failed to create test token: %v", err)
 	}
@@ -179,14 +133,13 @@ func TestValidateJWTWithDifferentUserIDs(t *testing.T) {
 	userID1 := uuid.New()
 	userID2 := uuid.New()
 	secret := "test-secret"
-	expiresIn := 1 * time.Hour
 
-	token1, err := MakeJWT(userID1, secret, expiresIn)
+	token1, err := MakeJWT(userID1, secret)
 	if err != nil {
 		t.Fatalf("Failed to create test token 1: %v", err)
 	}
 
-	token2, err := MakeJWT(userID2, secret, expiresIn)
+	token2, err := MakeJWT(userID2, secret)
 	if err != nil {
 		t.Fatalf("Failed to create test token 2: %v", err)
 	}
@@ -217,9 +170,8 @@ func TestValidateJWTWithDifferentUserIDs(t *testing.T) {
 func TestJWTClaims(t *testing.T) {
 	userID := uuid.New()
 	secret := "test-secret"
-	expiresIn := 1 * time.Hour
 
-	token, err := MakeJWT(userID, secret, expiresIn)
+	token, err := MakeJWT(userID, secret)
 	if err != nil {
 		t.Fatalf("Failed to create test token: %v", err)
 	}
@@ -256,101 +208,14 @@ func TestJWTClaims(t *testing.T) {
 			t.Errorf("Token was issued too long ago: %v", issuedAt)
 		}
 	}
-
-	// Verify expires at is in the future
-	if claims.ExpiresAt == nil {
-		t.Error("ExpiresAt claim is missing")
-	} else {
-		expiresAt := claims.ExpiresAt.Time
-		if expiresAt.Before(time.Now()) {
-			t.Errorf("Token expires in the past: %v", expiresAt)
-		}
-		if time.Until(expiresAt) > expiresIn+time.Second {
-			t.Errorf("Token expires too far in the future: %v", expiresAt)
-		}
-	}
-}
-
-func TestJWTWithVeryShortExpiration(t *testing.T) {
-	userID := uuid.New()
-	secret := "test-secret"
-	expiresIn := 200 * time.Millisecond // Longer to avoid immediate expiration
-
-	token, err := MakeJWT(userID, secret, expiresIn)
-	if err != nil {
-		t.Fatalf("Failed to create test token: %v", err)
-	}
-
-	// Token should be valid immediately
-	_, err = ValidateJWT(token, secret)
-	if err != nil {
-		// If it's already expired, that's also acceptable behavior
-		t.Logf("Token expired immediately, which is acceptable: %v", err)
-		return
-	}
-
-	// Wait for token to expire
-	time.Sleep(250 * time.Millisecond)
-
-	// Token should now be expired
-	_, err = ValidateJWT(token, secret)
-	if err == nil {
-		t.Error("Token should be expired after waiting")
-	}
-}
-
-func TestJWTWithZeroExpiration(t *testing.T) {
-	userID := uuid.New()
-	secret := "test-secret"
-	expiresIn := 50 * time.Millisecond // Use a short but workable time
-
-	token, err := MakeJWT(userID, secret, expiresIn)
-	if err != nil {
-		t.Fatalf("Failed to create test token: %v", err)
-	}
-
-	// Token should be valid immediately (or may already be expired, which is fine)
-	_, err = ValidateJWT(token, secret)
-	if err != nil {
-		// If it's already expired, that's also acceptable behavior for very short expiration
-		t.Logf("Token expired immediately, which is acceptable: %v", err)
-		return
-	}
-
-	// Wait for token to expire
-	time.Sleep(100 * time.Millisecond)
-
-	// Token should now be expired
-	_, err = ValidateJWT(token, secret)
-	if err == nil {
-		t.Error("Token should be expired after waiting")
-	}
-}
-
-func TestJWTWithNegativeExpiration(t *testing.T) {
-	userID := uuid.New()
-	secret := "test-secret"
-	expiresIn := -1 * time.Hour // Negative expiration
-
-	token, err := MakeJWT(userID, secret, expiresIn)
-	if err != nil {
-		t.Fatalf("Failed to create test token: %v", err)
-	}
-
-	// Token should be expired immediately
-	_, err = ValidateJWT(token, secret)
-	if err == nil {
-		t.Error("Token with negative expiration should be expired immediately")
-	}
 }
 
 func TestJWTWithNilUUID(t *testing.T) {
 	var userID uuid.UUID // nil UUID
 	secret := "test-secret"
-	expiresIn := 1 * time.Hour
 
 	// This should work (nil UUID is valid)
-	token, err := MakeJWT(userID, secret, expiresIn)
+	token, err := MakeJWT(userID, secret)
 	if err != nil {
 		t.Fatalf("MakeJWT() should work with nil UUID: %v", err)
 	}

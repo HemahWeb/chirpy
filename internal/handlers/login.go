@@ -45,7 +45,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.MakeJWT(user.ID, h.config.JWTSecret, time.Duration(1)*time.Hour)
+	token, err := auth.MakeJWT(user.ID, h.config.JWTSecret)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't create token", err)
 		return
