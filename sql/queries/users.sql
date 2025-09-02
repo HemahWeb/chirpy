@@ -13,13 +13,9 @@ SELECT id, created_at, updated_at, email
 FROM users WHERE email = $1 
 LIMIT 1;
 
--- name: UpdateUserEmail :one
-UPDATE users SET email = $2 WHERE id = $1 
-RETURNING id, created_at, updated_at, email;
-
--- name: UpdateUserPassword :one
-UPDATE users SET hashed_password = $2 WHERE id = $1 
-RETURNING id, created_at, updated_at, email;
+-- name: UpdateUserEmailAndPassword :one
+UPDATE users SET email = $2, hashed_password = $3 WHERE id = $1 
+RETURNING id, created_at, updated_at, email, hashed_password;
 
 -- name: DeleteUser :exec
 DELETE FROM users WHERE id = $1;

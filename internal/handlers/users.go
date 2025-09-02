@@ -67,3 +67,52 @@ func (h *Handler) UsersReset(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondWithJSON(w, http.StatusOK, struct{}{})
 }
+
+func (h *Handler) UsersUpdate(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Couldn't get token: "+err.Error(), err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.config.JWTSecret)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Couldn't validate token", err)
+		return
+	}
+
+	var params parameters
+	err = json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Couldn't decode parameters", err)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't hash password", err)
+		return
+	}
+
+	user, err := h.config.DB.UpdateUserEmailAndPassword(r.Context(), database.UpdateUserEmailAndPasswordParams{
+		ID:             userID,
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+	})
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't update user", err)
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, types.User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	})
+}

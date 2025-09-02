@@ -128,60 +128,26 @@ func (q *Queries) ResetUsers(ctx context.Context) error {
 	return err
 }
 
-const updateUserEmail = `-- name: UpdateUserEmail :one
-UPDATE users SET email = $2 WHERE id = $1 
-RETURNING id, created_at, updated_at, email
+const updateUserEmailAndPassword = `-- name: UpdateUserEmailAndPassword :one
+UPDATE users SET email = $2, hashed_password = $3 WHERE id = $1 
+RETURNING id, created_at, updated_at, email, hashed_password
 `
 
-type UpdateUserEmailParams struct {
-	ID    uuid.UUID
-	Email string
-}
-
-type UpdateUserEmailRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email     string
-}
-
-func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) (UpdateUserEmailRow, error) {
-	row := q.db.QueryRowContext(ctx, updateUserEmail, arg.ID, arg.Email)
-	var i UpdateUserEmailRow
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Email,
-	)
-	return i, err
-}
-
-const updateUserPassword = `-- name: UpdateUserPassword :one
-UPDATE users SET hashed_password = $2 WHERE id = $1 
-RETURNING id, created_at, updated_at, email
-`
-
-type UpdateUserPasswordParams struct {
+type UpdateUserEmailAndPasswordParams struct {
 	ID             uuid.UUID
+	Email          string
 	HashedPassword string
 }
 
-type UpdateUserPasswordRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email     string
-}
-
-func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (UpdateUserPasswordRow, error) {
-	row := q.db.QueryRowContext(ctx, updateUserPassword, arg.ID, arg.HashedPassword)
-	var i UpdateUserPasswordRow
+func (q *Queries) UpdateUserEmailAndPassword(ctx context.Context, arg UpdateUserEmailAndPasswordParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserEmailAndPassword, arg.ID, arg.Email, arg.HashedPassword)
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.HashedPassword,
 	)
 	return i, err
 }
