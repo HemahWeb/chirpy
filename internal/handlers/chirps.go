@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -107,4 +108,43 @@ func (h *Handler) GetChirpsByID(w http.ResponseWriter, r *http.Request) {
 		Body:      chirp.Body,
 		UserID:    chirp.UserID,
 	})
+}
+
+func (h *Handler) ChirpsDeleteByID(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Couldn't get token: "+err.Error(), err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.config.JWTSecret)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Couldn't validate token", err)
+		return
+	}
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid chirp ID: "+err.Error(), err)
+		return
+	}
+
+	chirp, err := h.config.DB.GetChirpByID(r.Context(), id)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "Chirp with ID "+id.String()+" does not exist", err)
+		return
+	}
+
+	if chirp.UserID != userID {
+		utils.RespondWithError(w, http.StatusForbidden, "You are not allowed to delete this chirp", errors.New("could not delete chirp: user ID mismatch"))
+		return
+	}
+
+	err = h.config.DB.DeleteChirp(r.Context(), id)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't delete chirp", err)
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusNoContent, nil)
 }
