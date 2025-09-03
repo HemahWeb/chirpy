@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 
 	"github.com/google/uuid"
 
@@ -66,6 +67,7 @@ func (h *Handler) PostChirps(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetChirps(w http.ResponseWriter, r *http.Request) {
 	author := r.URL.Query().Get("author_id")
+	sortOrder := r.URL.Query().Get("sort")
 
 	var chirps []database.Chirp
 	var err error
@@ -82,6 +84,12 @@ func (h *Handler) GetChirps(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Error getting chirps", err)
 		return
+	}
+
+	if sortOrder == "desc" {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		})
 	}
 
 	// map DB -> API (stable keys, decoupled from schema)
