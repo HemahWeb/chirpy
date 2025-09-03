@@ -34,6 +34,7 @@ func main() {
 		DB:             dbQueries,
 		Platform:       os.Getenv("PLATFORM"),
 		JWTSecret:      os.Getenv("JWT_SECRET"),
+		PolkaKey:       os.Getenv("POLKA_KEY"),
 	}
 
 	handler := handlers.New(&apiCfg)

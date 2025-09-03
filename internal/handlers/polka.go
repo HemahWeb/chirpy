@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/HemahWeb/chirpy/internal/auth"
 	"github.com/HemahWeb/chirpy/internal/utils"
 	"github.com/google/uuid"
 )
@@ -16,8 +17,19 @@ func (h *Handler) PolkaUpgrade(w http.ResponseWriter, r *http.Request) {
 		} `json:"data"`
 	}
 
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Couldn't get API key: "+err.Error(), err)
+		return
+	}
+
+	if apiKey != h.config.PolkaKey {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Invalid API key", nil)
+		return
+	}
+
 	var params parameters
-	err := json.NewDecoder(r.Body).Decode(&params)
+	err = json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Couldn't decode parameters", err)
 		return
