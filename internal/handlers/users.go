@@ -40,10 +40,11 @@ func (h *Handler) UsersCreate(w http.ResponseWriter, r *http.Request) {
 
 	// Map DB -> API (stable keys, decoupled from schema)
 	utils.RespondWithJSON(w, http.StatusCreated, types.User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }
 
@@ -65,7 +66,7 @@ func (h *Handler) UsersReset(w http.ResponseWriter, r *http.Request) {
 
 	h.config.FileserverHits.Store(0)
 
-	utils.RespondWithJSON(w, http.StatusOK, struct{}{})
+	utils.RespondWithJSON(w, http.StatusOK, nil)
 }
 
 func (h *Handler) UsersUpdate(w http.ResponseWriter, r *http.Request) {
@@ -110,9 +111,10 @@ func (h *Handler) UsersUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, types.User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }

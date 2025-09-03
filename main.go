@@ -55,6 +55,9 @@ func main() {
 	mux.HandleFunc("POST /api/revoke", handler.Revoke)
 	mux.HandleFunc("PUT /api/users", handler.UsersUpdate)
 
+	// Webhooks
+	mux.HandleFunc("POST /api/polka/webhooks", handler.PolkaUpgrade)
+
 	// Admin
 	mux.HandleFunc("POST /admin/reset", handler.UsersReset) // resets users and metrics
 	mux.HandleFunc("GET /admin/metrics", handler.MetricsView)

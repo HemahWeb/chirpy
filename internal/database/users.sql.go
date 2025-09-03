@@ -15,7 +15,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, hashed_password) 
 VALUES ($1, $2) 
-RETURNING id, created_at, updated_at, email
+RETURNING id, created_at, updated_at, email, is_chirpy_red
 `
 
 type CreateUserParams struct {
@@ -24,10 +24,11 @@ type CreateUserParams struct {
 }
 
 type CreateUserRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email     string
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Email       string
+	IsChirpyRed bool
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
@@ -38,6 +39,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -52,16 +54,17 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, created_at, updated_at, email 
+SELECT id, created_at, updated_at, email, is_chirpy_red 
 FROM users WHERE email = $1 
 LIMIT 1
 `
 
 type GetUserByEmailRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email     string
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Email       string
+	IsChirpyRed bool
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -72,12 +75,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUserByEmailForAuth = `-- name: GetUserByEmailForAuth :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users WHERE email = $1 LIMIT 1
+SELECT id, created_at, updated_at, email, hashed_password, is_chirpy_red FROM users WHERE email = $1 LIMIT 1
 `
 
 // auth-only
@@ -90,21 +94,23 @@ func (q *Queries) GetUserByEmailForAuth(ctx context.Context, email string) (User
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, created_at, updated_at, email 
+SELECT id, created_at, updated_at, email, is_chirpy_red 
 FROM users WHERE id = $1 
 LIMIT 1
 `
 
 type GetUserByIDRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email     string
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Email       string
+	IsChirpyRed bool
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
@@ -115,6 +121,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -130,7 +137,7 @@ func (q *Queries) ResetUsers(ctx context.Context) error {
 
 const updateUserEmailAndPassword = `-- name: UpdateUserEmailAndPassword :one
 UPDATE users SET email = $2, hashed_password = $3 WHERE id = $1 
-RETURNING id, created_at, updated_at, email, hashed_password
+RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type UpdateUserEmailAndPasswordParams struct {
@@ -148,6 +155,16 @@ func (q *Queries) UpdateUserEmailAndPassword(ctx context.Context, arg UpdateUser
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
+}
+
+const upgradeUserToChirpyRed = `-- name: UpgradeUserToChirpyRed :exec
+UPDATE users SET is_chirpy_red = TRUE WHERE id = $1
+`
+
+func (q *Queries) UpgradeUserToChirpyRed(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, upgradeUserToChirpyRed, id)
+	return err
 }
