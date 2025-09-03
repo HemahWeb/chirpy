@@ -65,9 +65,22 @@ func (h *Handler) PostChirps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := h.config.DB.GetChirps(r.Context())
+	author := r.URL.Query().Get("author_id")
+
+	var chirps []database.Chirp
+	var err error
+	if author != "" {
+		authorID, parseErr := uuid.Parse(author)
+		if parseErr != nil {
+			utils.RespondWithError(w, http.StatusBadRequest, "Invalid author ID", parseErr)
+			return
+		}
+		chirps, err = h.config.DB.GetChirpsByUserID(r.Context(), authorID)
+	} else {
+		chirps, err = h.config.DB.GetChirps(r.Context())
+	}
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't get chirps", err)
+		utils.RespondWithError(w, http.StatusInternalServerError, "Error getting chirps", err)
 		return
 	}
 
